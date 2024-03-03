@@ -1,1 +1,20 @@
 ﻿variable_name,description
+id,A running unique id for each facility
+GW1,What is the main water supply for the facility?
+GW2,Where is the main water supply for the facility located?
+GW3,Is water available from the main water supply at the time of the survey?
+GS1,What type of toilets/latrines are at the facility for patients?
+GS2,"Is at least one toilet usable (available, functional, private)?"
+GS3,Are there toilets that dedicated for staff?
+GS4,Are there toilets that are in sex-separated or gender-neutral rooms?
+GS5,Are there toilets that have menstrual hygiene facilities?
+GS6,Are there toilets that are accessible for people with limited mobility?
+GH1,Is there a functional hand hygiene facility at points ofcare on the day of the survey?
+GH2,Is there a functional handwashing facility at one ormore toilets on the day of the survey?
+GWM1,Is waste correctly segregated into at least threelabelled bins in the consultation area?
+GWM2,How does this facility usually treat/dispose of infectious waste?
+GWM3,How does this facility usually treat/dispose of sharps waste?
+GC1,Are cleaning protocols available?
+GC2,Have all staff responsible for cleaning received training?
+,
+Source,https://washdata.org/reports/jmp-2018-core-questions-and-indicators-wash-in-health-care-facilities
