@@ -1,31 +1,1317 @@
 ---
-title: "Producing JMP estimates from a WASH assessmnet in healthcare facilities"
-author: "Mohammad Shakkour"
-format: html
+title: "Producing JMP estimates"
+subtitle: "WASH in healthcare facilities: Water and Hygiene indicators"
+date: today
+author:
+  - name: Mohammad Shakkour
+    orcid: 0009-0003-2050-7204
+    email: shakkourm@who.int
+    affiliation: 
+      - name: World Health Organization Western Pacific Regional Office
+        url: https://www.who.int/westernpacific
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  warning: false
+editor_options: 
+  chunk_output_type: console
+code-fold: true
+license: "CC BY"
+citation: 
+  container-title: WASH in healthcare facilities
+  url: https://github.com/Shakkour726
+bibliography: references.bib
+csl: apa.csl
 editor: visual
 ---
 
-## Project Description
+# Introduction
 
-This project is aimed to run a JMP analysis to a WASH in healthcare facilities assessment carried out in a country
+This project aims to run an analysis to Water, Sanitation, Hygiene, Healthcare Waste Management and Environmental Cleaning (WASH) assessment in healthcare facilities. The analysis follows the World Health Organization (WHO) and the United Nations Children’s Fund (UNICEF) Joint Monitoring Programme for Water Supply, Sanitation and Hygiene (JMP) methodology to produce basic, limited and no service estimates. The sample is nationally representative according to the JMP methodology.
 
-## Import
+# Methods
+
+The dataset contains the results of a WASH assessment in healthcare facilities carried out in one of the Member States. The WASH indicators are:
+
+-   Water
+-   Sanitation
+-   Hygiene
+-   Healthcare Waste Management
+-   Environmental Cleaning
+
+Calculating the estimates follows the [JMP methodology](https://washdata.org/reports/jmp-2017-methodology).
+
+Phase 1 of the project will run the analysis on water and hygiene indicators **only**.
+
+## Import and reading
+
+Import libraries and reading the data
 
 ```{r}
 
-library(readxl)
+#| label: load-packages
+#| warning: false
+
+# import libraries 
+library(readr)
 library(tidyverse)
+library(dplyr)
+library(ggthemes)
+library(ggplot2)
+library(knitr)
+
+# reading file
+data <- read_csv(here::here("data/processed/WinHCFs_microdata.csv"))
+#glimpse(data)
 
 ```
 
-You can add options to executable code like this
+## Stratifiers
+
+Each stratifier includes more than 50 facilities. According to the JMP methodology, estimates can be produced for each stratifier.
 
 ```{r}
 
-# read file
+total_sample <- data |>
+  count()
 
-data <- read_csv(here::here("data/raw/WinHCFs_microdata.csv"))
+total_urban <- data |>
+  filter(`urban/rural` == "Urban") |>
+  count()
 
-glimpse(data)
+total_rural <- data |>
+  filter(`urban/rural` == "Rural") |>
+  count()
+
+total_hospital <- data |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count()
+
+total_nonhospital <- data |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count()
+
+total_public <- data |>
+  filter(`public/private` == "Public") |>
+  count()
+
+total_private <- data |>
+  filter(`public/private` == "Private") |>
+  count()
 
 ```
+
+## Water Data
+
+### Improved sources
+
+Calculating improved water source for each stratifier
+
+```{r}
+
+# calculating improved water source
+GW1 <- data |>
+  select(GW1, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gw1 <- GW1 |>
+  count(GW1) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GW1, Total)
+
+urban_gw1 <- GW1 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GW1) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GW1, Urban)
+
+rural_gw1 <- GW1 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GW1) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GW1, Rural)
+
+hospital_gw1 <- GW1 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GW1) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GW1, Hospital)
+
+nonhospital_gw1 <- GW1 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GW1) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GW1, Nonhospital)
+
+public_gw1 <- GW1 |>
+  filter(`public/private` == "Public") |>
+  count(GW1) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GW1, Public)
+
+private_gw1 <- GW1 |>
+  filter(`public/private` == "Private") |>
+  count(GW1) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GW1, Private)
+
+# joining and replace NA with zero 
+water_source <- total_gw1 |>
+  left_join(urban_gw1) |>
+  left_join(rural_gw1) |>
+  left_join(hospital_gw1) |>
+  left_join(nonhospital_gw1) |>
+  left_join(public_gw1) |>
+  left_join(private_gw1)
+
+# replacing NA with zero
+water_source <- water_source |>
+  replace(is.na(water_source), 0)
+
+# calculate improved
+improved_water_source <- water_source |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole"
+        ) |>
+  summarise_at(vars(Total, Urban, Rural, Hospital, Nonhospital, Public, Private), sum)|>
+  mutate(Indicator = "Improved water source") |>
+  relocate(Indicator, .before = Total)
+
+# calculate no service
+no_service_water <- water_source |>
+  filter(GW1 == "Don't Know" |
+         GW1 == "No water source or patients bring water from home" |
+         GW1 == "Other" |
+         GW1 == "Unprotected dug well"
+        ) |>
+  summarise_at(vars(Total, Urban, Rural, Hospital, Nonhospital, Public, Private), sum) |>
+  mutate(Indicator = "No service") |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### On premises
+
+Calculating on premises indicator for each stratifier
+
+```{r}
+
+# calculate on premises
+GW2 <- data |>
+  select(GW2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gw2 <- GW2 |>
+  count(GW2) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GW2, Total) |>
+  filter(GW2 == "On premises")
+
+urban_gw2 <- GW2 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GW2) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GW2, Urban) |>
+  filter(GW2 == "On premises")
+
+rural_gw2 <- GW2 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GW2) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GW2, Rural)|>
+  filter(GW2 == "On premises")
+
+hospital_gw2 <- GW2 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GW2) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GW2, Hospital)|>
+  filter(GW2 == "On premises")
+
+nonhospital_gw2 <- GW2 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GW2) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GW2, Nonhospital)|>
+  filter(GW2 == "On premises")
+
+public_gw2 <- GW2 |>
+  filter(`public/private` == "Public") |>
+  count(GW2) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GW2, Public)|>
+  filter(GW2 == "On premises")
+
+private_gw2 <- GW2 |>
+  filter(`public/private` == "Private") |>
+  count(GW2) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GW2, Private)|>
+  filter(GW2 == "On premises")
+
+# joining
+on_premises <- total_gw2 |>
+  left_join(urban_gw2) |>
+  left_join(rural_gw2) |>
+  left_join(hospital_gw2) |>
+  left_join(nonhospital_gw2) |>
+  left_join(public_gw2) |>
+  left_join(private_gw2) |>
+  rename(Indicator = GW2)
+
+```
+
+### Availability
+
+Calculating water availability indicator for each stratifier
+
+```{r}
+
+# calculate availability
+GW3 <- data |>
+  select(GW3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gw3 <- GW3 |>
+  count(GW3) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GW3, Total) |>
+  filter(GW3 == "Yes")
+
+urban_gw3 <- GW3 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GW3) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GW3, Urban) |>
+  filter(GW3 == "Yes")
+
+rural_gw3 <- GW3 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GW3) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GW3, Rural)|>
+  filter(GW3 == "Yes")
+
+hospital_gw3 <- GW3 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GW3) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GW3, Hospital)|>
+  filter(GW3 == "Yes")
+
+nonhospital_gw3 <- GW3 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GW3) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GW3, Nonhospital)|>
+  filter(GW3 == "Yes")
+
+public_gw3 <- GW3 |>
+  filter(`public/private` == "Public") |>
+  count(GW3) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GW3, Public)|>
+  filter(GW3 == "Yes")
+
+private_gw3 <- GW3 |>
+  filter(`public/private` == "Private") |>
+  count(GW3) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GW3, Private)|>
+  filter(GW3 == "Yes")
+
+# joining
+available <- total_gw3 |>
+  left_join(urban_gw3) |>
+  left_join(rural_gw3) |>
+  left_join(hospital_gw3) |>
+  left_join(nonhospital_gw3) |>
+  left_join(public_gw3) |>
+  left_join(private_gw3) |>
+  mutate(Indicator = "Available",
+         GW3= NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and available
+
+Calculating improved and available water indicator for each stratifier
+
+```{r}
+
+# calculating improved and available
+GW13 <- data |>
+  select(GW1, GW3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gw13 <- GW13 |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GW3, Total)
+
+urban_gw13 <- GW13 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GW3, Urban)
+
+rural_gw13 <- GW13 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GW3, Rural)
+
+
+hospital_gw13 <- GW13 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GW3, Hospital)
+
+nonhospital_gw13 <- GW13 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GW3, Nonhospital)
+
+public_gw13 <- GW13 |>
+  filter(`public/private`== "Public") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GW3, Public)
+
+private_gw13 <- GW13 |>
+  filter(`public/private`== "Private") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW3) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GW3, Private)
+
+# joining
+improved_available <- total_gw13 |>
+  left_join(urban_gw13) |>
+  left_join(rural_gw13) |>
+  left_join(hospital_gw13) |>
+  left_join(nonhospital_gw13) |>
+  left_join(public_gw13) |>
+  left_join(private_gw13) |>
+  mutate(Indicator = "Improved and available",
+         GW3 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and on premises
+
+Calculating improved and on premises indicator for each stratifier
+
+```{r}
+
+#calculating improved and on premises
+GW12 <- data |>
+  select(GW1, GW2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gw12 <- GW12 |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GW2, Total)
+
+urban_gw12 <- GW12 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GW2, Urban)
+
+rural_gw12 <- GW12 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GW2, Rural)
+
+hospital_gw12 <- GW12 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GW2, Hospital)
+
+nonhospital_gw12 <- GW12 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GW2, Nonhospital)
+
+public_gw12 <- GW12 |>
+  filter(`public/private`== "Public") |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GW2, Public)
+
+private_gw12 <- GW12 |>
+  filter(`public/private`== "Private") |>
+  filter(GW2 == "On premises") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GW2, Private)
+
+# joining
+improved_onpremises <- total_gw12 |>
+  left_join(urban_gw12) |>
+  left_join(rural_gw12) |>
+  left_join(hospital_gw12) |>
+  left_join(nonhospital_gw12) |>
+  left_join(public_gw12) |>
+  left_join(private_gw12) |>
+  mutate(Indicator = "Improved and on premises",
+         GW2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Basic and limited services
+
+Calculating basic and limited service for each stratifier
+
+```{r}
+
+#calculating basic
+GW123 <- data |>
+  select(GW1, GW2, GW3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+basic_total <- GW123 |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GW2, Total)
+
+basic_urban <- GW123 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GW2, Urban)
+
+basic_rural <- GW123 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GW2, Rural)
+
+basic_hospital <- GW123 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GW2, Hospital)
+
+basic_nonhospital <- GW123 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GW2, Nonhospital)
+
+basic_public <- GW123 |>
+  filter(`public/private`== "Public") |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GW2, Public)
+
+basic_private <- GW123 |>
+  filter(`public/private`== "Private") |>
+  filter(GW2 == "On premises") |>
+  filter(GW3 == "Yes") |>
+  filter(GW1 == "Piped Supply Outside the building" |
+         GW1 == "Piped Supply inside the building" |
+         GW1 == "Protected dug well" |
+         GW1 == "Tanker truck" |
+         GW1 == "Rainwater"    |
+         GW1 == "Tube well/Borehole") |>
+  count(GW2) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GW2, Private)
+
+# joining
+basic_water <- basic_total |>
+  left_join(basic_urban) |>
+  left_join(basic_rural) |>
+  left_join(basic_hospital) |>
+  left_join(basic_nonhospital) |>
+  left_join(basic_public) |>
+  left_join(basic_private) |>
+  mutate(Indicator = "Basic",
+         GW2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating limited
+limited_water <- tibble(
+  Total = 100 - (basic_water[2] + no_service_water[2]),
+  Urban = 100 - (basic_water[3] + no_service_water[3]),
+  Rural = 100 - (basic_water[4] + no_service_water[4]),
+  Hospital = 100 - (basic_water[5] + no_service_water[5]),
+  Nonhospital = 100 - (basic_water[6] + no_service_water[6]),
+  Public = 100 - (basic_water[7] + no_service_water[7]),
+  Private = 100 - (basic_water[8] + no_service_water[8])) |>
+  mutate(Indicator = "Limited",
+         Total =  Total$Total,
+         Urban = Urban$Urban,
+         Rural = Rural$Rural,
+         Hospital = Hospital$Hospital,
+         Nonhospital = Nonhospital$Nonhospital,
+         Public = Public$Public,
+         Private = Private$Private) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+## Hygiene Data
+
+### Points of care
+
+Calculating handwashing facilities with water and soap at points of care for each stratifier
+
+```{r}
+
+# calculating handwashing facilities with water and soap at points of care
+GH1 <- data |>
+  select(GH1, `urban/rural`, `hospital/non-hospital`, `public/private`) |>
+  filter(GH1 == "Yes")
+
+total_gh1 <- GH1 |>
+  count(GH1) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GH1, Total)
+
+urban_gh1 <- GH1 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GH1) |>
+  mutate(Urban = (n / total_urban)*100)|>
+  select(GH1, Urban)
+
+rural_gh1 <- GH1 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GH1) |>
+  mutate(Rural = (n / total_rural)*100)|>
+  select(GH1, Rural)
+
+hospital_gh1 <- GH1 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GH1) |>
+  mutate(Hospital = (n / total_hospital)*100)|>
+  select(GH1, Hospital)
+
+nonhospital_gh1 <- GH1 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GH1) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100)|>
+  select(GH1, Nonhospital)
+
+public_gh1 <- GH1 |>
+  filter(`public/private` == "Public") |>
+  count(GH1) |>
+  mutate(Public = (n / total_public)*100)|>
+  select(GH1, Public)
+
+private_gh1 <- GH1 |>
+  filter(`public/private` == "Private") |>
+  count(GH1) |>
+  mutate(Private = (n / total_private)*100)|>
+  select(GH1, Private)
+
+# joining and replace NA with zero 
+pointsofcare <- total_gh1 |>
+  left_join(urban_gh1) |>
+  left_join(rural_gh1) |>
+  left_join(hospital_gh1) |>
+  left_join(nonhospital_gh1) |>
+  left_join(public_gh1) |>
+  left_join(private_gh1) |>
+  mutate(Indicator = "Handwashing facilities with water and soap at points of care",
+         GH1 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Toilets
+
+Calculating handwashing facilities within 5 meters of toilets for each stratifier
+
+```{r}
+
+# calculating handwashing facilities within 5 metres of toilets
+GH2 <- data |>
+  select(GH2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gh2 <- GH2 |>
+  filter(GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Total = (n / total_sample) * 100,
+         n = NULL)
+
+urban_gh2 <- GH2 |>
+  filter(`urban/rural`== "Urban",
+         GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Urban = (n / total_urban) * 100,
+         n = NULL)
+
+rural_gh2 <- GH2 |>
+  filter(`urban/rural`== "Rural",
+         GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Rural = (n / total_rural) * 100,
+         n = NULL)
+
+hospital_gh2 <- GH2 |>
+  filter(`hospital/non-hospital` == "Hospital",
+         GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Hospital = (n / total_hospital) * 100,
+         n = NULL)
+
+nonhospital_gh2 <- GH2 |>
+  filter(`hospital/non-hospital` == "Non-Hospital",
+         GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Nonhospital = (n / total_nonhospital) * 100,
+         n = NULL)
+
+public_gh2 <- GH2 |>
+  filter(`public/private` == "Public",
+         GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Public = (n / total_public) * 100,
+         n = NULL)
+
+private_gh2 <- GH2 |>
+  filter(`public/private` == "Private",
+         GH2 == "Yes" |
+         GH2 == "No, there are handwashing facilities near the toilets but lacking soap and /or water") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Private = (n / total_private) * 100,
+         n = NULL)
+
+# joining
+toilets <- total_gh2 |>
+  left_join(urban_gh2) |>
+  left_join(rural_gh2) |>
+  left_join(hospital_gh2) |>
+  left_join(nonhospital_gh2) |>
+  left_join(public_gh2) |>
+  left_join(private_gh2) |>
+  mutate(Indicator = "Handwashing facilities within 5 metres of toilets",
+         GH2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating handwashing facilities within 5 metres of toilets with water and soap
+GH2_fun <- data |>
+  select(GH2, `urban/rural`, `hospital/non-hospital`, `public/private`) |>
+  filter(GH2 == "Yes")
+
+total_gh2_fun <- GH2_fun |>
+  count(GH2) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GH2, Total)
+
+urban_gh2_fun <- GH2_fun |>
+  filter(`urban/rural`== "Urban") |>
+  count(GH2) |>
+  mutate(Urban = (n / total_urban)*100)|>
+  select(GH2, Urban)
+
+rural_gh2_fun <- GH2_fun |>
+  filter(`urban/rural`== "Rural") |>
+  count(GH2) |>
+  mutate(Rural = (n / total_rural)*100)|>
+  select(GH2, Rural)
+
+hospital_gh2_fun <- GH2_fun |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GH2) |>
+  mutate(Hospital = (n / total_hospital)*100)|>
+  select(GH2, Hospital)
+
+nonhospital_gh2_fun <- GH2_fun |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GH2) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100)|>
+  select(GH2, Nonhospital)
+
+public_gh2_fun <- GH2_fun |>
+  filter(`public/private` == "Public") |>
+  count(GH2) |>
+  mutate(Public = (n / total_public)*100)|>
+  select(GH2, Public)
+
+private_gh2_fun <- GH2_fun |>
+  filter(`public/private` == "Private") |>
+  count(GH2) |>
+  mutate(Private = (n / total_private)*100)|>
+  select(GH2, Private)
+
+# joining
+toilets_fun <- total_gh2_fun |>
+  left_join(urban_gh2_fun) |>
+  left_join(rural_gh2_fun) |>
+  left_join(hospital_gh2_fun) |>
+  left_join(nonhospital_gh2_fun) |>
+  left_join(public_gh2_fun) |>
+  left_join(private_gh2_fun) |>
+  mutate(Indicator = "Handwashing facilities within 5 metres of toilets with water and soap",
+         GH2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Basic and limited services
+
+Calculating basic and limited service for each stratifier
+
+```{r}
+
+# calculating basic
+GH12 <- data |>
+  select(GH1, GH2, `urban/rural`, `hospital/non-hospital`, `public/private`) |>
+  filter(GH1 == "Yes" &
+         GH2 == "Yes")
+
+total_gh12 <- GH12 |>
+  count(GH2) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GH2, Total)
+
+urban_gh12 <- GH12 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GH2) |>
+  mutate(Urban = (n / total_urban)*100)|>
+  select(GH2, Urban)
+
+rural_gh12 <- GH12 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GH2) |>
+  mutate(Rural = (n / total_rural)*100)|>
+  select(GH2, Rural)
+
+hospital_gh12 <- GH12 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GH2) |>
+  mutate(Hospital = (n / total_hospital)*100)|>
+  select(GH2, Hospital)
+
+nonhospital_gh12 <- GH12 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GH2) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100)|>
+  select(GH2, Nonhospital)
+
+public_gh12 <- GH12 |>
+  filter(`public/private` == "Public") |>
+  count(GH2) |>
+  mutate(Public = (n / total_public)*100)|>
+  select(GH2, Public)
+
+private_gh12 <- GH12 |>
+  filter(`public/private` == "Private") |>
+  count(GH2) |>
+  mutate(Private = (n / total_private)*100)|>
+  select(GH2, Private)
+
+# joining
+basic_hygiene <- total_gh12 |>
+  left_join(urban_gh12) |>
+  left_join(rural_gh12) |>
+  left_join(hospital_gh12) |>
+  left_join(nonhospital_gh12) |>
+  left_join(public_gh12) |>
+  left_join(private_gh12) |>
+  mutate(Indicator = "Basic",
+         GH2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating no serivce
+GH12_no <- data |>
+  select(GH1, GH2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gh12_no <- GH12_no |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Total = (n / total_sample) * 100,
+         n = NULL)
+
+urban_gh12_no <- GH12_no |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Urban = (n / total_urban) * 100,
+         n = NULL)
+
+rural_gh12_no <- GH12_no |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Rural = (n / total_rural) * 100,
+         n = NULL)
+
+hospital_gh12_no <- GH12_no |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Hospital = (n / total_hospital) * 100,
+         n = NULL)
+
+nonhospital_gh12_no <- GH12_no |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Nonhospital = (n / total_nonhospital) * 100,
+         n = NULL)
+
+public_gh12_no <- GH12_no |>
+  filter(`public/private` == "Public") |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Public = (n / total_public) * 100,
+         n = NULL)
+
+private_gh12_no <- GH12_no |>
+  filter(`public/private` == "Private") |>
+  filter(GH1 != "Yes" &
+         GH2 != "Yes") |>
+  count(GH2) |>
+  summarise_at(vars(n), sum) |>
+  mutate(GH2 = "Yes",
+         Private = (n / total_private) * 100,
+         n = NULL)
+
+# joining
+no_service_hygiene <- total_gh12_no |>
+  left_join(urban_gh12_no) |>
+  left_join(rural_gh12_no) |>
+  left_join(hospital_gh12_no) |>
+  left_join(nonhospital_gh12_no) |>
+  left_join(public_gh12_no) |>
+  left_join(private_gh12_no) |>
+  mutate(Indicator = "No service",
+         GH2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating limited
+limited_hygiene <- tibble(
+  Total = 100 - (basic_hygiene[2] + no_service_hygiene[2]),
+  Urban = 100 - (basic_hygiene[3] + no_service_hygiene[3]),
+  Rural = 100 - (basic_hygiene[4] + no_service_hygiene[4]),
+  Hospital = 100 - (basic_hygiene[5] + no_service_hygiene[5]),
+  Nonhospital = 100 - (basic_hygiene[6] + no_service_hygiene[6]),
+  Public = 100 - (basic_hygiene[7] + no_service_hygiene[7]),
+  Private = 100 - (basic_hygiene[8] + no_service_hygiene[8])) |>
+  mutate(Indicator = "Limited",
+         Total =  Total$Total,
+         Urban = Urban$Urban,
+         Rural = Rural$Rural,
+         Hospital = Hospital$Hospital,
+         Nonhospital = Nonhospital$Nonhospital,
+         Public = Public$Public,
+         Private = Private$Private) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+# Results
+
+## Water indicators
+
+See @tbl-water summarizes all water indicators resulted from the analysis.
+
+Significant disparities in water indicators exist in terms of the types of facilities; facilities located in urban areas as well as hospitals are more likely to meet the criteria for basic water service than facilities located in rural areas and smaller health care facilities, respectively.
+
+```{r}
+#| label: tbl-water
+#| tbl-cap: Water indicators
+
+improved_water_source |>
+  full_join(on_premises) |>
+  full_join(available) |>
+  full_join(improved_available) |>
+  full_join(improved_onpremises) |>
+  full_join(basic_water) |>
+  full_join(limited_water) |>
+  full_join(no_service_water) |>
+  kable(digits = 1)
+
+```
+
+## Hygiene indicators
+
+See @tbl-hygiene summarizes all hygiene indicators resulted from the analysis.
+
+Significant disparities in hygiene indicators exist in terms of the types of facilities; facilities located in urban areas as well as hospitals are more likely to meet the criteria for basic hygiene service than facilities located in rural areas and smaller health care facilities, respectively.
+
+```{r}
+#| label: tbl-hygiene
+#| tbl-cap: Hygiene indicators
+
+pointsofcare |>
+  full_join(toilets) |>
+  full_join(toilets_fun) |>
+  full_join(basic_hygiene) |>
+  full_join(limited_hygiene) |>
+  full_join(no_service_hygiene) |>
+  kable(digits = 1)
+
+```
+
+# Conclusion
+
+## Basic water ladder
+
+See @fig-water illustrates basic water ladder resulted from the analysis. Significant disparities are depicted in the basic water ladders across all settings.
+
+```{r}
+#| label: fig-water
+#| fig-cap: Basic water ladder
+
+# create object
+basic_water_ladder <-
+  (basic_water) |>
+  full_join(limited_water) |>
+  full_join(no_service_water)
+
+# pivot
+basic_water_ladder <-
+  basic_water_ladder |>
+  pivot_longer(cols = Total:Private,
+             names_to = "Setting",
+             values_to = "Percent")
+
+# reorder indicators
+basic_water_ladder$Indicator <- factor(basic_water_ladder$Indicator, levels = c("No service", "Limited", "Basic"))
+
+# reorder settings
+basic_water_ladder$Setting <- factor(basic_water_ladder$Setting, levels = c("Total", "Urban", "Rural", "Hospital", "Nonhospital", "Public", "Private"))
+
+# Assigning white for basic in geom_text
+basic_water_ladder <- basic_water_ladder |>
+  mutate(Color = case_when(
+    Indicator == "Basic" ~ "white",
+    .default = "black"))
+
+# plot water ladders
+ggplot(data = basic_water_ladder,
+       mapping = aes(x = Setting,
+                     y = Percent,
+                     fill = Indicator)) +
+  geom_col() +
+  geom_text(aes(label = round(Percent, 0)),
+            position = position_stack(vjust = 0.5),
+            size = 3,
+            color = basic_water_ladder$Color) +
+  theme_minimal() +
+  labs(title = "Water Indicator",
+       subtitle = "JMP basic water service ladder",
+       x = "Setting",
+       y = "Proportion of healthcare facilities (%)") +
+  scale_fill_manual(
+    values = c("No service" = "#FEBC11", "Limited" = "#FFF176", "Basic" = "#00B8EC"),
+    breaks = c("No service", "Limited","Basic")) +
+  guides(fill = guide_legend(title = NULL)) +
+  theme(panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank())
+
+```
+
+## Basic hygiene ladder
+
+See @fig-hygiene illustrates basic hygiene ladder resulted from the analysis. Significant disparities are depicted in the basic hygiene ladders across all settings.
+
+```{r}
+#| label: fig-hygiene
+#| fig-cap: Basic hygiene ladder
+
+# create object
+basic_hygiene_ladder <-
+  (basic_hygiene) |>
+  full_join(limited_hygiene) |>
+  full_join(no_service_hygiene)
+
+# pivot
+basic_hygiene_ladder <-
+  basic_hygiene_ladder |>
+  pivot_longer(cols = Total:Private,
+             names_to = "Setting",
+             values_to = "Percent")
+
+# reorder indicators
+basic_hygiene_ladder$Indicator <- factor(basic_hygiene_ladder$Indicator, levels = c("No service", "Limited", "Basic"))
+
+# reorder settings
+basic_hygiene_ladder$Setting <- factor(basic_hygiene_ladder$Setting, levels = c("Total", "Urban", "Rural", "Hospital", "Nonhospital", "Public", "Private"))
+
+# Assigning white for basic in geom_text
+basic_hygiene_ladder <- basic_hygiene_ladder |>
+  mutate(Color = case_when(
+    Indicator == "Basic" ~ "white",
+    .default = "black"))
+
+# plot hygiene ladders
+ggplot(data = basic_hygiene_ladder,
+       mapping = aes(x = Setting,
+                     y = Percent,
+                     fill = Indicator)) +
+  geom_col() +
+  geom_text(aes(label = round(Percent, 0)),
+            position = position_stack(vjust = 0.5),
+            size = 3,
+            color = basic_hygiene_ladder$Color) +
+  theme_minimal() +
+  labs(title = "Hygiene Indicator",
+       subtitle = "JMP basic hygiene service ladder",
+       x = "Setting",
+       y = "Proportion of healthcare facilities (%)") +
+  scale_fill_manual(
+    values = c("No service" = "#FEBC11", "Limited" = "#FFF176", "Basic" = "#AB47BC"),
+    breaks = c("No service", "Limited","Basic")) +
+  guides(fill = guide_legend(title = NULL)) +
+  theme(panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank())
+```
+
+# References
+
+1.  @WHOUNICEF2017
+2.  @WHOUNICEF2019
