@@ -1,6 +1,6 @@
 ---
 title: "Producing JMP estimates"
-subtitle: "WASH in healthcare facilities: Water and Hygiene indicators"
+subtitle: "WASH in healthcare facilities: Water, Sanitation and Hygiene indicators"
 date: today
 author:
   - name: Mohammad Shakkour
@@ -43,7 +43,7 @@ The dataset contains the results of a WASH assessment in healthcare facilities c
 
 Calculating the estimates follows the [JMP methodology](https://washdata.org/reports/jmp-2017-methodology).
 
-Phase 1 of the project will run the analysis on water and hygiene indicators **only**.
+This project is running the analysis on water, sanitation and hygiene indicators **only**.
 
 ## Import and reading
 
@@ -156,7 +156,7 @@ private_gw1 <- GW1 |>
   mutate(Private = (n / sum(n))*100)|>
   select(GW1, Private)
 
-# joining and replace NA with zero 
+# joining
 water_source <- total_gw1 |>
   left_join(urban_gw1) |>
   left_join(rural_gw1) |>
@@ -727,6 +727,1098 @@ limited_water <- tibble(
 
 ```
 
+## Sanitation Data
+
+### Improved facilities
+
+Calculating improved sanitation facilities for each stratifier
+
+```{r}
+
+# calculating improved sanitation facility
+GS1 <- data |>
+  select(GS1, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs1 <- GS1 |>
+  count(GS1) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GS1, Total)
+
+urban_gs1 <- GS1 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GS1) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GS1, Urban)
+
+rural_gs1 <- GS1 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GS1) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GS1, Rural)
+
+hospital_gs1 <- GS1 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GS1) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GS1, Hospital)
+
+nonhospital_gs1 <- GS1 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GS1) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GS1, Nonhospital)
+
+public_gs1 <- GS1 |>
+  filter(`public/private` == "Public") |>
+  count(GS1) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GS1, Public)
+
+private_gs1 <- GS1 |>
+  filter(`public/private` == "Private") |>
+  count(GS1) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GS1, Private)
+
+# joining
+san_fac <- total_gs1 |>
+  left_join(urban_gs1) |>
+  left_join(rural_gs1) |>
+  left_join(hospital_gs1) |>
+  left_join(nonhospital_gs1) |>
+  left_join(public_gs1) |>
+  left_join(private_gs1)
+
+# replacing NA with zero
+san_fac <- san_fac |>
+  replace(is.na(san_fac), 0)
+
+# calculate improved
+improved_san_fac <- san_fac |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  summarise_at(vars(Total, Urban, Rural, Hospital, Nonhospital, Public, Private), sum)|>
+  mutate(Indicator = "Improved sanitation facility") |>
+  relocate(Indicator, .before = Total)
+
+# calculate no service
+no_service_san <- san_fac |>
+  filter(GS1 == "Pit latrine without slab" |
+         GS1 == "other") |>
+  summarise_at(vars(Total, Urban, Rural, Hospital, Nonhospital, Public, Private), sum) |>
+  mutate(Indicator = "No service") |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Usable facilities
+
+Calculating usable sanitation facilities for each stratifier
+
+```{r}
+
+# calculate usable facilities
+GS2 <- data |>
+  select(GS2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs2 <- GS2 |>
+  count(GS2) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GS2, Total) |>
+  filter(GS2 == "Yes")
+
+urban_gs2 <- GS2 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GS2) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GS2, Urban) |>
+  filter(GS2 == "Yes")
+
+rural_gs2 <- GS2 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GS2) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GS2, Rural)|>
+  filter(GS2 == "Yes")
+
+hospital_gs2 <- GS2 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GS2) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GS2, Hospital)|>
+  filter(GS2 == "Yes")
+
+nonhospital_gs2 <- GS2 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GS2) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GS2, Nonhospital)|>
+  filter(GS2 == "Yes")
+
+public_gs2 <- GS2 |>
+  filter(`public/private` == "Public") |>
+  count(GS2) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GS2, Public)|>
+  filter(GS2 == "Yes")
+
+private_gs2 <- GS2 |>
+  filter(`public/private` == "Private") |>
+  count(GS2) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GS2, Private)|>
+  filter(GS2 == "Yes")
+
+# joining
+san_usable <- total_gs2 |>
+  left_join(urban_gs2) |>
+  left_join(rural_gs2) |>
+  left_join(hospital_gs2) |>
+  left_join(nonhospital_gs2) |>
+  left_join(public_gs2) |>
+  left_join(private_gs2) |>
+  mutate(Indicator = "Usable sanitation facility",
+         GS2 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Facilities dedicated to staff
+
+Calculating facilities dedicated for staff for each stratifier
+
+```{r}
+
+# calculate facilities dedicated for staff
+GS3 <- data |>
+  select(GS3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs3 <- GS3 |>
+  count(GS3) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GS3, Total) |>
+  filter(GS3 == "Yes")
+
+urban_gs3 <- GS3 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GS3) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GS3, Urban) |>
+  filter(GS3 == "Yes")
+
+rural_gs3 <- GS3 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GS3) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GS3, Rural)|>
+  filter(GS3 == "Yes")
+
+hospital_gs3 <- GS3 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GS3) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GS3, Hospital)|>
+  filter(GS3 == "Yes")
+
+nonhospital_gs3 <- GS3 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GS3) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GS3, Nonhospital)|>
+  filter(GS3 == "Yes")
+
+public_gs3 <- GS3 |>
+  filter(`public/private` == "Public") |>
+  count(GS3) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GS3, Public)|>
+  filter(GS3 == "Yes")
+
+private_gs3 <- GS3 |>
+  filter(`public/private` == "Private") |>
+  count(GS3) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GS3, Private)|>
+  filter(GS3 == "Yes")
+
+# joining
+san_staff <- total_gs3 |>
+  left_join(urban_gs3) |>
+  left_join(rural_gs3) |>
+  left_join(hospital_gs3) |>
+  left_join(nonhospital_gs3) |>
+  left_join(public_gs3) |>
+  left_join(private_gs3) |>
+  mutate(Indicator = "Dedicated to staff",
+         GS3 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Sex-separated facilities
+
+Calculating sex-separated facilities for each stratifier
+
+```{r}
+
+# calculate sex-separated facilities
+GS4 <- data |>
+  select(GS4, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs4 <- GS4 |>
+  count(GS4) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GS4, Total) |>
+  filter(GS4 == "Yes")
+
+urban_gs4 <- GS4 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GS4) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GS4, Urban) |>
+  filter(GS4 == "Yes")
+
+rural_gs4 <- GS4 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GS4) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GS4, Rural)|>
+  filter(GS4 == "Yes")
+
+hospital_gs4 <- GS4 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GS4) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GS4, Hospital)|>
+  filter(GS4 == "Yes")
+
+nonhospital_gs4 <- GS4 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GS4) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GS4, Nonhospital)|>
+  filter(GS4 == "Yes")
+
+public_gs4 <- GS4 |>
+  filter(`public/private` == "Public") |>
+  count(GS4) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GS4, Public)|>
+  filter(GS4 == "Yes")
+
+private_gs4 <- GS4 |>
+  filter(`public/private` == "Private") |>
+  count(GS4) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GS4, Private)|>
+  filter(GS4 == "Yes")
+
+# joining
+san_sex <- total_gs4 |>
+  left_join(urban_gs4) |>
+  left_join(rural_gs4) |>
+  left_join(hospital_gs4) |>
+  left_join(nonhospital_gs4) |>
+  left_join(public_gs4) |>
+  left_join(private_gs4) |>
+  mutate(Indicator = "Sex-separated facility",
+         GS4 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Menstrual hygiene facilities
+
+Calculating menstrual hygiene facilities for each stratifier
+
+```{r}
+
+# calculate menstrual hygiene facilities
+GS5 <- data |>
+  select(GS5, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs5 <- GS5 |>
+  count(GS5) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GS5, Total) |>
+  filter(GS5 == "Yes")
+
+urban_gs5 <- GS5 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GS5) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GS5, Urban) |>
+  filter(GS5 == "Yes")
+
+rural_gs5 <- GS5 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GS5) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GS5, Rural)|>
+  filter(GS5 == "Yes")
+
+hospital_gs5 <- GS5 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GS5) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GS5, Hospital)|>
+  filter(GS5 == "Yes")
+
+nonhospital_gs5 <- GS5 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GS5) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GS5, Nonhospital)|>
+  filter(GS5 == "Yes")
+
+public_gs5 <- GS5 |>
+  filter(`public/private` == "Public") |>
+  count(GS5) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GS5, Public)|>
+  filter(GS5 == "Yes")
+
+private_gs5 <- GS5 |>
+  filter(`public/private` == "Private") |>
+  count(GS5) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GS5, Private)|>
+  filter(GS5 == "Yes")
+
+# joining
+san_mhm <- total_gs5 |>
+  left_join(urban_gs5) |>
+  left_join(rural_gs5) |>
+  left_join(hospital_gs5) |>
+  left_join(nonhospital_gs5) |>
+  left_join(public_gs5) |>
+  left_join(private_gs5) |>
+  mutate(Indicator = "Menstrual hygiene faciliy",
+         GS5 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Accessible for limited mobility
+
+Calculating facilities accessible for limited mobility for each stratifier
+
+```{r}
+
+# calculate facilities accessible for limited mobility
+GS6 <- data |>
+  select(GS6, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs6 <- GS6 |>
+  count(GS6) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GS6, Total) |>
+  filter(GS6 == "yes")
+
+urban_gs6 <- GS6 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GS6) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GS6, Urban) |>
+  filter(GS6 == "yes")
+
+rural_gs6 <- GS6 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GS6) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GS6, Rural)|>
+  filter(GS6 == "yes")
+
+hospital_gs6 <- GS6 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GS6) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GS6, Hospital)|>
+  filter(GS6 == "yes")
+
+nonhospital_gs6 <- GS6 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GS6) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GS6, Nonhospital)|>
+  filter(GS6 == "yes")
+
+public_gs6 <- GS6 |>
+  filter(`public/private` == "Public") |>
+  count(GS6) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GS6, Public)|>
+  filter(GS6 == "yes")
+
+private_gs6 <- GS6 |>
+  filter(`public/private` == "Private") |>
+  count(GS6) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GS6, Private)|>
+  filter(GS6 == "yes")
+
+# joining
+san_mobility <- total_gs6 |>
+  left_join(urban_gs6) |>
+  left_join(rural_gs6) |>
+  left_join(hospital_gs6) |>
+  left_join(nonhospital_gs6) |>
+  left_join(public_gs6) |>
+  left_join(private_gs6) |>
+  mutate(Indicator = "Accessible for limited mobility",
+         GS6 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and usable
+
+Calculating improved and usable indicator for each stratifier
+
+```{r}
+
+#calculating improved and usable
+GS12 <- data |>
+  select(GS1, GS2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs12 <- GS12 |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GS2, Total)
+
+urban_gs12 <- GS12 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GS2, Urban)
+
+rural_gs12 <- GS12 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GS2, Rural)
+
+hospital_gs12 <- GS12 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GS2, Hospital)
+
+nonhospital_gs12 <- GS12 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GS2, Nonhospital)
+
+public_gs12 <- GS12 |>
+  filter(`public/private`== "Public") |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GS2, Public)
+
+private_gs12 <- GS12 |>
+  filter(`public/private`== "Private") |>
+  filter(GS2 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GS2, Private)
+
+# joining
+improved_usable <- total_gs12 |>
+  left_join(urban_gs12) |>
+  left_join(rural_gs12) |>
+  left_join(hospital_gs12) |>
+  left_join(nonhospital_gs12) |>
+  left_join(public_gs12) |>
+  left_join(private_gs12) |>
+  mutate(Indicator = "Improved and usable",
+         GS2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and staff
+
+Calculating improved and staff indicator for each stratifier
+
+```{r}
+
+#calculating improved and staff
+GS13 <- data |>
+  select(GS1, GS3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs13 <- GS13 |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GS3, Total)
+
+urban_gs13 <- GS13 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GS3, Urban)
+
+rural_gs13 <- GS13 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GS3, Rural)
+
+hospital_gs13 <- GS13 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GS3, Hospital)
+
+nonhospital_gs13 <- GS13 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GS3, Nonhospital)
+
+public_gs13 <- GS13 |>
+  filter(`public/private`== "Public") |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GS3, Public)
+
+private_gs13 <- GS13 |>
+  filter(`public/private`== "Private") |>
+  filter(GS3 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS3) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GS3, Private)
+
+# joining
+improved_staff <- total_gs13 |>
+  left_join(urban_gs13) |>
+  left_join(rural_gs13) |>
+  left_join(hospital_gs13) |>
+  left_join(nonhospital_gs13) |>
+  left_join(public_gs13) |>
+  left_join(private_gs13) |>
+  mutate(Indicator = "Improved and staff",
+         GS3 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and sex-separated
+
+Calculating improved and sex-separated indicator for each stratifier
+
+```{r}
+
+#calculating improved and sex-separated
+GS14 <- data |>
+  select(GS1, GS4, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs14 <- GS14 |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GS4, Total)
+
+urban_gs14 <- GS14 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GS4, Urban)
+
+rural_gs14 <- GS14 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GS4, Rural)
+
+hospital_gs14 <- GS14 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GS4, Hospital)
+
+nonhospital_gs14 <- GS14 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GS4, Nonhospital)
+
+public_gs14 <- GS14 |>
+  filter(`public/private`== "Public") |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GS4, Public)
+
+private_gs14 <- GS14 |>
+  filter(`public/private`== "Private") |>
+  filter(GS4 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS4) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GS4, Private)
+
+# joining
+improved_sex <- total_gs14 |>
+  left_join(urban_gs14) |>
+  left_join(rural_gs14) |>
+  left_join(hospital_gs14) |>
+  left_join(nonhospital_gs14) |>
+  left_join(public_gs14) |>
+  left_join(private_gs14) |>
+  mutate(Indicator = "Improved and sex-separated",
+         GS4 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and menstrual hygiene
+
+Calculating improved and menstrual hygiene indicator for each stratifier
+
+```{r}
+
+#calculating improved and menstrual hygiene
+GS15 <- data |>
+  select(GS1, GS5, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs15 <- GS15 |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GS5, Total)
+
+urban_gs15 <- GS15 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GS5, Urban)
+
+rural_gs15 <- GS15 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GS5, Rural)
+
+hospital_gs15 <- GS15 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GS5, Hospital)
+
+nonhospital_gs15 <- GS15 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GS5, Nonhospital)
+
+public_gs15 <- GS15 |>
+  filter(`public/private`== "Public") |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GS5, Public)
+
+private_gs15 <- GS15 |>
+  filter(`public/private`== "Private") |>
+  filter(GS5 == "Yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS5) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GS5, Private)
+
+# joining
+improved_mhm <- total_gs15 |>
+  left_join(urban_gs15) |>
+  left_join(rural_gs15) |>
+  left_join(hospital_gs15) |>
+  left_join(nonhospital_gs15) |>
+  left_join(public_gs15) |>
+  left_join(private_gs15) |>
+  mutate(Indicator = "Improved and menstrual hygiene",
+         GS5 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Improved and limited mobility
+
+Calculating improved and limited mobility indicator for each stratifier
+
+```{r}
+
+#calculating improved and limited mobility
+GS16 <- data |>
+  select(GS1, GS6, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gs16 <- GS16 |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GS6, Total)
+
+urban_gs16 <- GS16 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GS6, Urban)
+
+rural_gs16 <- GS16 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GS6, Rural)
+
+hospital_gs16 <- GS16 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GS6, Hospital)
+
+nonhospital_gs16 <- GS16 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GS6, Nonhospital)
+
+public_gs16 <- GS16 |>
+  filter(`public/private`== "Public") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GS6, Public)
+
+private_gs16 <- GS16 |>
+  filter(`public/private`== "Private") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS6) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GS6, Private)
+
+# joining
+improved_mobility <- total_gs16 |>
+  left_join(urban_gs16) |>
+  left_join(rural_gs16) |>
+  left_join(hospital_gs16) |>
+  left_join(nonhospital_gs16) |>
+  left_join(public_gs16) |>
+  left_join(private_gs16) |>
+  mutate(Indicator = "Improved and limited mobility",
+         GS6 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Basic and limited services
+
+Calculating basic and limited service for each stratifier
+
+```{r}
+
+#calculating basic
+GS <- data |>
+  select(GS1, GS2, GS3, GS4, GS5, GS6, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+basic_total <- GS |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GS2, Total)
+
+basic_urban <- GS |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GS2, Urban)
+
+basic_rural <- GS |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GS2, Rural)
+
+basic_hospital <- GS |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GS2, Hospital)
+
+basic_nonhospital <- GS |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GS2, Nonhospital)
+
+basic_public <- GS |>
+  filter(`public/private`== "Public") |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GS2, Public)
+
+basic_private <- GS |>
+  filter(`public/private`== "Private") |>
+  filter(GS2 == "Yes") |>
+  filter(GS3 == "Yes") |>
+  filter(GS4 == "Yes") |>
+  filter(GS5 == "Yes") |>
+  filter(GS6 == "yes") |>
+  filter(GS1 == "Flush/Pour-flush toilet to tank or pit" |
+         GS1 == "Pit latrine with slab" |
+         GS1 == "pit latrine with slab") |>
+  count(GS2) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GS2, Private)
+
+# joining
+basic_san <- basic_total |>
+  left_join(basic_urban) |>
+  left_join(basic_rural) |>
+  left_join(basic_hospital) |>
+  left_join(basic_nonhospital) |>
+  left_join(basic_public) |>
+  left_join(basic_private) |>
+  mutate(Indicator = "Basic",
+         GS2 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating limited
+limited_san <- tibble(
+  Total = 100 - (basic_san[2] + no_service_san[2]),
+  Urban = 100 - (basic_san[3] + no_service_san[3]),
+  Rural = 100 - (basic_san[4] + no_service_san[4]),
+  Hospital = 100 - (basic_san[5] + no_service_san[5]),
+  Nonhospital = 100 - (basic_san[6] + no_service_san[6]),
+  Public = 100 - (basic_san[7] + no_service_san[7]),
+  Private = 100 - (basic_san[8] + no_service_san[8])) |>
+  mutate(Indicator = "Limited",
+         Total =  Total$Total,
+         Urban = Urban$Urban,
+         Rural = Rural$Rural,
+         Hospital = Hospital$Hospital,
+         Nonhospital = Nonhospital$Nonhospital,
+         Public = Public$Public,
+         Private = Private$Private) |>
+  relocate(Indicator, .before = Total)
+
+```
+
 ## Hygiene Data
 
 ### Points of care
@@ -1176,6 +2268,34 @@ improved_water_source |>
 
 ```
 
+## Sanitation indicators
+
+See @tbl-sanitation summarizes all sanitation indicators resulted from the analysis.
+
+Significant disparities in sanitation indicators exist in terms of the types of facilities; facilities located in urban areas as well as hospitals are more likely to meet the criteria for basic sanitation service than facilities located in rural areas and smaller health care facilities, respectively.
+
+```{r}
+#| label: tbl-sanitation
+#| tbl-cap: Sanitation indicators
+
+improved_san_fac |>
+  full_join(san_usable) |>
+  full_join(san_staff) |>
+  full_join(san_sex) |>
+  full_join(san_mhm) |>
+  full_join(san_mobility) |>
+  full_join(improved_usable) |>
+  full_join(improved_staff) |>
+  full_join(improved_sex) |>
+  full_join(improved_mhm) |>
+  full_join(improved_mobility) |>
+  full_join(basic_san) |>
+  full_join(limited_san) |>
+  full_join(no_service_san) |>
+  kable(digits = 1)
+
+```
+
 ## Hygiene indicators
 
 See @tbl-hygiene summarizes all hygiene indicators resulted from the analysis.
@@ -1248,6 +2368,63 @@ ggplot(data = basic_water_ladder,
        y = "Proportion of healthcare facilities (%)") +
   scale_fill_manual(
     values = c("No service" = "#FEBC11", "Limited" = "#FFF176", "Basic" = "#00B8EC"),
+    breaks = c("No service", "Limited","Basic")) +
+  guides(fill = guide_legend(title = NULL)) +
+  theme(panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank())
+
+```
+
+## Basic sanitation ladder
+
+See @fig-sanitation illustrates basic sanitation ladder resulted from the analysis. Basic estimates are too low across all settings.
+
+```{r}
+#| label: fig-sanitation
+#| fig-cap: Basic sanitation ladder
+
+#create object
+basic_san_ladder <-
+  (basic_san) |>
+  full_join(limited_san) |>
+  full_join(no_service_san)
+
+#pivot
+basic_san_ladder <-
+  basic_san_ladder |>
+  pivot_longer(cols = Total:Private,
+             names_to = "Setting",
+             values_to = "Percent")
+
+#reorder indicators
+basic_san_ladder$Indicator <- factor(basic_san_ladder$Indicator, levels = c("No service", "Limited", "Basic"))
+
+#reorder settings
+basic_san_ladder$Setting <- factor(basic_san_ladder$Setting, levels = c("Total", "Urban", "Rural", "Hospital", "Nonhospital", "Public", "Private"))
+
+# Assigning white for basic in geom_text
+basic_san_ladder <- basic_san_ladder |>
+  mutate(Color = case_when(
+    Indicator == "Basic" ~ "white",
+    .default = "black"))
+
+# plot sanitation ladders
+ggplot(data = basic_san_ladder,
+       mapping = aes(x = Setting,
+                     y = Percent,
+                     fill = Indicator)) +
+  geom_col() +
+  geom_text(aes(label = round(Percent, 0)),
+            position = position_stack(vjust = 0.5),
+            size = 3,
+            color = basic_san_ladder$Color) +
+  theme_minimal() +
+  labs(title = "Sanitation Indicator",
+       subtitle = "JMP basic sanitation service ladder",
+       x = "Setting",
+       y = "Proportion of healthcare facilities (%)") +
+  scale_fill_manual(
+    values = c("No service" = "#FEBC11", "Limited" = "#FFF176", "Basic" = "#66BB6A"),
     breaks = c("No service", "Limited","Basic")) +
   guides(fill = guide_legend(title = NULL)) +
   theme(panel.grid.minor.y = element_blank(),
