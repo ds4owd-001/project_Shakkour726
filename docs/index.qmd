@@ -1,6 +1,6 @@
 ---
 title: "Producing JMP estimates"
-subtitle: "WASH in healthcare facilities: Water, Sanitation and Hygiene indicators"
+subtitle: "WASH in healthcare facilities"
 date: today
 author:
   - name: Mohammad Shakkour
@@ -42,8 +42,6 @@ The dataset contains the results of a WASH assessment in healthcare facilities c
 -   Environmental Cleaning
 
 Calculating the estimates follows the [JMP methodology](https://washdata.org/reports/jmp-2017-methodology).
-
-This project is running the analysis on water, sanitation and hygiene indicators **only**.
 
 ## Import and reading
 
@@ -735,7 +733,7 @@ Calculating improved sanitation facilities for each stratifier
 
 ```{r}
 
-# calculating improved sanitation facility
+#calculating improved sanitation facility
 GS1 <- data |>
   select(GS1, `urban/rural`, `hospital/non-hospital`, `public/private`)
 
@@ -818,7 +816,7 @@ Calculating usable sanitation facilities for each stratifier
 
 ```{r}
 
-# calculate usable facilities
+#calculate usable facilities
 GS2 <- data |>
   select(GS2, `urban/rural`, `hospital/non-hospital`, `public/private`)
 
@@ -1678,7 +1676,7 @@ Calculating basic and limited service for each stratifier
 
 ```{r}
 
-#calculating basic
+# calculating basic
 GS <- data |>
   select(GS1, GS2, GS3, GS4, GS5, GS6, `urban/rural`, `hospital/non-hospital`, `public/private`)
 
@@ -2244,6 +2242,812 @@ limited_hygiene <- tibble(
 
 ```
 
+## Healthcare waste Data
+
+### Waste segregation
+
+Calculating waste segregation in consultation areas for each stratifier
+
+```{r}
+
+#calculate safe waste segregation
+GWM1 <- data |>
+  select(GWM1, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gwm1 <- GWM1 |>
+  count(GWM1) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GWM1, Total) |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+urban_gwm1 <- GWM1 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GWM1) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GWM1, Urban) |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+rural_gwm1 <- GWM1 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GWM1) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GWM1, Rural)|>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+hospital_gwm1 <- GWM1 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GWM1) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GWM1, Hospital)|>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+nonhospital_gwm1 <- GWM1 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GWM1) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GWM1, Nonhospital)|>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+public_gwm1 <- GWM1 |>
+  filter(`public/private` == "Public") |>
+  count(GWM1) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GWM1, Public)|>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+private_gwm1 <- GWM1 |>
+  filter(`public/private` == "Private") |>
+  count(GWM1) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GWM1, Private)|>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins")
+
+# joining
+waste_seg <- total_gwm1 |>
+  left_join(urban_gwm1) |>
+  left_join(rural_gwm1) |>
+  left_join(hospital_gwm1) |>
+  left_join(nonhospital_gwm1) |>
+  left_join(public_gwm1) |>
+  left_join(private_gwm1) |>
+  mutate(Indicator = "Safe waste segregation",
+         GWM1 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Infectious waste treatment / disposal
+
+Calculating Infectious waste treatment / disposal for each stratifier
+
+```{r}
+
+# calculating safe infectious waste treatment / disposal
+GWM2 <- data |>
+  select(WGM2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gwm2 <- GWM2 |>
+  count(WGM2) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(WGM2, Total)
+
+urban_gwm2 <- GWM2 |>
+  filter(`urban/rural`== "Urban") |>
+  count(WGM2) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(WGM2, Urban)
+
+rural_gwm2 <- GWM2 |>
+  filter(`urban/rural`== "Rural") |>
+  count(WGM2) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(WGM2, Rural)
+
+hospital_gwm2 <- GWM2 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(WGM2) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(WGM2, Hospital)
+
+nonhospital_gwm2 <- GWM2 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(WGM2) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(WGM2, Nonhospital)
+
+public_gwm2 <- GWM2 |>
+  filter(`public/private` == "Public") |>
+  count(WGM2) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(WGM2, Public)
+
+private_gwm2 <- GWM2 |>
+  filter(`public/private` == "Private") |>
+  count(WGM2) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(WGM2, Private)
+
+# joining
+infcs_waste <- total_gwm2 |>
+  left_join(urban_gwm2) |>
+  left_join(rural_gwm2) |>
+  left_join(hospital_gwm2) |>
+  left_join(nonhospital_gwm2) |>
+  left_join(public_gwm2) |>
+  left_join(private_gwm2)
+
+# replacing NA with zero
+infcs_waste <- infcs_waste |>
+  replace(is.na(infcs_waste), 0)
+
+# calculate safe
+safe_infcs_waste <- infcs_waste |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  summarise_at(vars(Total, Urban, Rural, Hospital, Nonhospital, Public, Private), sum)|>
+  mutate(Indicator = "Safe infectious waste treatment / disposal") |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Sharps waste treatment / disposal
+
+Calculating sharps waste treatment / disposal for each stratifier
+
+```{r}
+
+# calculating safe sharps waste treatment / disposal
+GWM3 <- data |>
+  select(GWM3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gwm3 <- GWM3 |>
+  count(GWM3) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GWM3, Total)
+
+urban_gwm3 <- GWM3 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GWM3) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GWM3, Urban)
+
+rural_gwm3 <- GWM3 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GWM3) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GWM3, Rural)
+
+hospital_gwm3 <- GWM3 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GWM3) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GWM3, Hospital)
+
+nonhospital_gwm3 <- GWM3 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GWM3) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GWM3, Nonhospital)
+
+public_gwm3 <- GWM3 |>
+  filter(`public/private` == "Public") |>
+  count(GWM3) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GWM3, Public)
+
+private_gwm3 <- GWM3 |>
+  filter(`public/private` == "Private") |>
+  count(GWM3) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GWM3, Private)
+
+# joining
+sharp_waste <- total_gwm3 |>
+  left_join(urban_gwm3) |>
+  left_join(rural_gwm3) |>
+  left_join(hospital_gwm3) |>
+  left_join(nonhospital_gwm3) |>
+  left_join(public_gwm3) |>
+  left_join(private_gwm3)
+
+# replacing NA with zero
+sharp_waste <- sharp_waste |>
+  replace(is.na(sharp_waste), 0)
+
+# calculate safe
+safe_sharp_waste <- sharp_waste |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  summarise_at(vars(Total, Urban, Rural, Hospital, Nonhospital, Public, Private), sum)|>
+  mutate(Indicator = "Safe sharps waste treatment / disposal") |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Basic and limited services
+
+Calculating basic and limited service for each stratifier
+
+```{r}
+
+# calculating basic
+GWM123 <- data |>
+  select(GWM1, WGM2, GWM3, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+basic_total <- GWM123 |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GWM1, Total)
+
+basic_urban <- GWM123 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GWM1, Urban)
+
+basic_rural <- GWM123 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GWM1, Rural)
+
+basic_hospital <- GWM123 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GWM1, Hospital)
+
+basic_nonhospital <- GWM123 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GWM1, Nonhospital)
+
+basic_public <- GWM123 |>
+  filter(`public/private`== "Public") |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GWM1, Public)
+
+basic_private <- GWM123 |>
+  filter(`public/private`== "Private") |>
+  filter(GWM1 == "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 == "Incinerated (other)" |
+         WGM2 == "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 == "Incinerated (other)" |
+         GWM3 == "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GWM1, Private)
+
+# joining
+basic_waste <- basic_total |>
+  left_join(basic_urban) |>
+  left_join(basic_rural) |>
+  left_join(basic_hospital) |>
+  left_join(basic_nonhospital) |>
+  left_join(basic_public) |>
+  left_join(basic_private) |>
+  mutate(Indicator = "Basic",
+         GWM1 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating no service
+no_service_total <- GWM123 |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Total = (n / total_sample)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Total)
+
+no_service_urban <- GWM123 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Urban = (n / total_urban)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Urban)
+
+no_service_rural <- GWM123 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Rural = (n / total_rural)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Rural)
+
+no_service_hospital <- GWM123 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Hospital = (n / total_hospital)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Hospital)
+
+no_service_nonhospital <- GWM123 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Nonhospital)
+
+no_service_public <- GWM123 |>
+  filter(`public/private`== "Public") |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Public = (n / total_public)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Public)
+
+no_service_private <- GWM123 |>
+  filter(`public/private`== "Private") |>
+  filter(GWM1 != "Yes, waste is segregated  into three labelled bins") |>
+  filter(WGM2 != "Incinerated (other)" &
+         WGM2 != "Not treated, but burried in lined, protected pit") |>
+  filter(GWM3 != "Incinerated (other)" &
+         GWM3 != "Not treated, but buried in lined, protected pit") |>
+  count(GWM1) |>
+  summarise_at(vars(n), sum) |>
+  mutate(Private = (n / total_private)*100,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Private)
+
+# joining
+no_service_waste <- no_service_total |>
+  left_join(no_service_urban) |>
+  left_join(no_service_rural) |>
+  left_join(no_service_hospital) |>
+  left_join(no_service_nonhospital) |>
+  left_join(no_service_public) |>
+  left_join(no_service_private) |>
+  mutate(Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n)
+
+# calculating limited
+limited_waste <- tibble(
+  Total = 100 - (basic_waste[2] + no_service_waste[2]),
+  Urban = 100 - (basic_waste[3] + no_service_waste[3]),
+  Rural = 100 - (basic_waste[4] + no_service_waste[4]),
+  Hospital = 100 - (basic_waste[5] + no_service_waste[5]),
+  Nonhospital = 100 - (basic_waste[6] + no_service_waste[6]),
+  Public = 100 - (basic_waste[7] + no_service_waste[7]),
+  Private = 100 - (basic_waste[8] + no_service_waste[8])) |>
+  mutate(Indicator = "Limited",
+         Total =  Total$Total,
+         Urban = Urban$Urban,
+         Rural = Rural$Rural,
+         Hospital = Hospital$Hospital,
+         Nonhospital = Nonhospital$Nonhospital,
+         Public = Public$Public,
+         Private = Private$Private) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+## Environmental cleaning Data
+
+### Cleaning protocols
+
+Calculating cleaning protocols for each stratifier
+
+```{r}
+
+#calculate cleaning protocols
+GC1 <- data |>
+  select(GC1, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gc1 <- GC1 |>
+  count(GC1) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GC1, Total) |>
+  filter(GC1 == "Yes")
+
+urban_gc1 <- GC1 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GC1) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GC1, Urban) |>
+  filter(GC1 == "Yes")
+
+rural_gc1 <- GC1 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GC1) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GC1, Rural)|>
+  filter(GC1 == "Yes")
+
+hospital_gc1 <- GC1 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GC1) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GC1, Hospital)|>
+  filter(GC1 == "Yes")
+
+nonhospital_gc1 <- GC1 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GC1) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GC1, Nonhospital)|>
+  filter(GC1 == "Yes")
+
+public_gc1 <- GC1 |>
+  filter(`public/private` == "Public") |>
+  count(GC1) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GC1, Public)|>
+  filter(GC1 == "Yes")
+
+private_gc1 <- GC1 |>
+  filter(`public/private` == "Private") |>
+  count(GC1) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GC1, Private)|>
+  filter(GC1 == "Yes")
+
+# joining
+protocols <- total_gc1 |>
+  left_join(urban_gc1) |>
+  left_join(rural_gc1) |>
+  left_join(hospital_gc1) |>
+  left_join(nonhospital_gc1) |>
+  left_join(public_gc1) |>
+  left_join(private_gc1) |>
+  mutate(Indicator = "Cleaning protocols",
+         GC1 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Training
+
+Calculating training for each stratifier
+
+```{r}
+
+#calculate cleaning protocols
+GC2 <- data |>
+  select(GC2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+total_gc2 <- GC2 |>
+  count(GC2) |>
+  mutate(Total = (n / sum(n))*100) |>
+  select(GC2, Total) |>
+  filter(GC2 == "Yes, all have been trained")
+
+urban_gc2 <- GC2 |>
+  filter(`urban/rural`== "Urban") |>
+  count(GC2) |>
+  mutate(Urban = (n / sum(n))*100)|>
+  select(GC2, Urban) |>
+  filter(GC2 == "Yes, all have been trained")
+
+rural_gc2 <- GC2 |>
+  filter(`urban/rural`== "Rural") |>
+  count(GC2) |>
+  mutate(Rural = (n / sum(n))*100)|>
+  select(GC2, Rural)|>
+  filter(GC2 == "Yes, all have been trained")
+
+hospital_gc2 <- GC2 |>
+  filter(`hospital/non-hospital` == "Hospital") |>
+  count(GC2) |>
+  mutate(Hospital = (n / sum(n))*100)|>
+  select(GC2, Hospital)|>
+  filter(GC2 == "Yes, all have been trained")
+
+nonhospital_gc2 <- GC2 |>
+  filter(`hospital/non-hospital` == "Non-Hospital") |>
+  count(GC2) |>
+  mutate(Nonhospital = (n / sum(n))*100)|>
+  select(GC2, Nonhospital)|>
+  filter(GC2 == "Yes, all have been trained")
+
+public_gc2 <- GC2 |>
+  filter(`public/private` == "Public") |>
+  count(GC2) |>
+  mutate(Public = (n / sum(n))*100)|>
+  select(GC2, Public)|>
+  filter(GC2 == "Yes, all have been trained")
+
+private_gc2 <- GC2 |>
+  filter(`public/private` == "Private") |>
+  count(GC2) |>
+  mutate(Private = (n / sum(n))*100)|>
+  select(GC2, Private)|>
+  filter(GC2 == "Yes, all have been trained")
+
+# joining
+training <- total_gc2 |>
+  left_join(urban_gc2) |>
+  left_join(rural_gc2) |>
+  left_join(hospital_gc2) |>
+  left_join(nonhospital_gc2) |>
+  left_join(public_gc2) |>
+  left_join(private_gc2) |>
+  mutate(Indicator = "Training",
+         GC2 = NULL) |>
+  relocate(Indicator, .before = Total)
+
+```
+
+### Basic and limited services
+
+Calculating basic and limited service for each stratifier
+
+```{r}
+
+# calculating basic
+GC12 <- data |>
+  select(GC1, GC2, `urban/rural`, `hospital/non-hospital`, `public/private`)
+
+basic_total <- GC12 |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Total = (n / total_sample)*100) |>
+  select(GC1, Total)
+
+basic_urban <- GC12 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Urban = (n / total_urban)*100) |>
+  select(GC1, Urban)
+
+basic_rural <- GC12 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Rural = (n / total_rural)*100) |>
+  select(GC1, Rural)
+
+basic_hospital <- GC12 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Hospital = (n / total_hospital)*100) |>
+  select(GC1, Hospital)
+
+basic_nonhospital <- GC12 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100) |>
+  select(GC1, Nonhospital)
+
+basic_public <- GC12 |>
+  filter(`public/private`== "Public") |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Public = (n / total_public)*100) |>
+  select(GC1, Public)
+
+basic_private <- GC12 |>
+  filter(`public/private`== "Private") |>
+  filter(GC1 == "Yes") |>
+  filter(GC2 == "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Private = (n / total_private)*100) |>
+  select(GC1, Private)
+
+# joining
+basic_cleaning <- basic_total |>
+  left_join(basic_urban) |>
+  left_join(basic_rural) |>
+  left_join(basic_hospital) |>
+  left_join(basic_nonhospital) |>
+  left_join(basic_public) |>
+  left_join(basic_private) |>
+  mutate(Indicator = "Basic",
+         GC1 = NULL,
+         Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n) |>
+  relocate(Indicator, .before = Total)
+
+# calculating no service
+no_service_total <- GC12 |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Total = (n / total_sample)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Total)
+
+no_service_urban <- GC12 |>
+  filter(`urban/rural`== "Urban") |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Urban = (n / total_urban)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Urban)
+
+no_service_rural <- GC12 |>
+  filter(`urban/rural`== "Rural") |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Rural = (n / total_rural)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Rural)
+
+no_service_hospital <- GC12 |>
+  filter(`hospital/non-hospital`== "Hospital") |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Hospital = (n / total_hospital)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Hospital)
+
+no_service_nonhospital <- GC12 |>
+  filter(`hospital/non-hospital`== "Non-Hospital") |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Nonhospital = (n / total_nonhospital)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Nonhospital)
+
+no_service_public <- GC12 |>
+  filter(`public/private`== "Public") |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Public = (n / total_public)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Public)
+
+no_service_private <- GC12 |>
+  filter(`public/private`== "Private") |>
+  filter(GC1 == "No") |>
+  filter(GC2 != "Yes, all have been trained") |>
+  count(GC1) |>
+  mutate(Private = (n / total_private)*100,
+         GC1 = NULL,
+         n = NULL,
+         Indicator = "No service") |>
+  relocate(Indicator, .before = Private)
+
+# joining
+no_service_cleaning <- no_service_total |>
+  left_join(no_service_urban) |>
+  left_join(no_service_rural) |>
+  left_join(no_service_hospital) |>
+  left_join(no_service_nonhospital) |>
+  left_join(no_service_public) |>
+  left_join(no_service_private) |>
+  mutate(Total =  Total$n,
+         Urban = Urban$n,
+         Rural = Rural$n,
+         Hospital = Hospital$n,
+         Nonhospital = Nonhospital$n,
+         Public = Public$n,
+         Private = Private$n)
+
+# calculating limited
+limited_cleaning <- tibble(
+  Total = 100 - (basic_cleaning[2] + no_service_cleaning[2]),
+  Urban = 100 - (basic_cleaning[3] + no_service_cleaning[3]),
+  Rural = 100 - (basic_cleaning[4] + no_service_cleaning[4]),
+  Hospital = 100 - (basic_cleaning[5] + no_service_cleaning[5]),
+  Nonhospital = 100 - (basic_cleaning[6] + no_service_cleaning[6]),
+  Public = 100 - (basic_cleaning[7] + no_service_cleaning[7]),
+  Private = 100 - (basic_cleaning[8] + no_service_cleaning[8])) |>
+  mutate(Indicator = "Limited",
+         Total =  Total$Total,
+         Urban = Urban$Urban,
+         Rural = Rural$Rural,
+         Hospital = Hospital$Hospital,
+         Nonhospital = Nonhospital$Nonhospital,
+         Public = Public$Public,
+         Private = Private$Private) |>
+  relocate(Indicator, .before = Total)
+
+```
+
 # Results
 
 ## Water indicators
@@ -2312,6 +3116,47 @@ pointsofcare |>
   full_join(basic_hygiene) |>
   full_join(limited_hygiene) |>
   full_join(no_service_hygiene) |>
+  kable(digits = 1)
+
+```
+
+## Healthcare waste management indicators
+
+See @tbl-waste summarizes all healthcare waste indicators resulted from the analysis.
+
+Minor disparities in waste indicators exist in terms of the types of facilities; however, facilities located in urban areas as well as hospitals are more likely to meet the criteria for basic healthcare waste service than facilities located in rural areas and smaller health care facilities, respectively.
+
+```{r}
+#| label: tbl-waste
+#| tbl-cap: Healthcare waste management indicators
+
+
+waste_seg |>
+  full_join(safe_infcs_waste) |>
+  full_join(safe_sharp_waste) |>
+  full_join(basic_waste) |>
+  full_join(limited_waste) |>
+  full_join(no_service_waste) |>
+  kable(digits = 1)
+
+```
+
+## Environmental cleaning indicators
+
+See @tbl-cleaning summarizes environmental cleaning indicators resulted from the analysis.
+
+Minor disparities in environmental cleaning indicators exist in terms of the types of facilities; however, facilities located in urban areas as well as hospitals are more likely to meet the criteria for basic environmental cleaning service than facilities located in rural areas and smaller health care facilities, respectively.
+
+```{r}
+#| label: tbl-cleaning
+#| tbl-cap: Environmental cleaning indicators
+
+
+protocols |>
+  full_join(training) |>
+  full_join(basic_cleaning) |>
+  full_join(limited_cleaning) |>
+  full_join(no_service_cleaning) |>
   kable(digits = 1)
 
 ```
@@ -2486,6 +3331,120 @@ ggplot(data = basic_hygiene_ladder,
   guides(fill = guide_legend(title = NULL)) +
   theme(panel.grid.minor.y = element_blank(),
         panel.grid.major.x = element_blank())
+```
+
+## Basic healthcare waste ladder
+
+See @fig-waste illustrates basic healthcare waste ladder resulted from the analysis. Basic estimates are low across all settings.
+
+```{r}
+#| label: fig-waste
+#| fig-cap: Basic healthcare waste ladder
+
+# create object
+basic_waste_ladder <-
+  (basic_waste) |>
+  full_join(limited_waste) |>
+  full_join(no_service_waste)
+
+# pivot
+basic_waste_ladder <-
+  basic_waste_ladder |>
+  pivot_longer(cols = Total:Private,
+             names_to = "Setting",
+             values_to = "Percent")
+
+# reorder indicators
+basic_waste_ladder$Indicator <- factor(basic_waste_ladder$Indicator, levels = c("No service", "Limited", "Basic"))
+
+# reorder settings
+basic_waste_ladder$Setting <- factor(basic_waste_ladder$Setting, levels = c("Total", "Urban", "Rural", "Hospital", "Nonhospital", "Public", "Private"))
+
+# Assigning white for basic in geom_text
+basic_waste_ladder <- basic_waste_ladder |>
+  mutate(Color = case_when(
+    Indicator == "Basic" ~ "white",
+    .default = "black"))
+
+# plot waste ladders
+ggplot(data = basic_waste_ladder,
+       mapping = aes(x = Setting,
+                     y = Percent,
+                     fill = Indicator)) +
+  geom_col() +
+  geom_text(aes(label = round(Percent, 0)),
+            position = position_stack(vjust = 0.5),
+            size = 3,
+            color = basic_waste_ladder$Color) +
+  theme_minimal() +
+  labs(title = "Healthcare Waste Indicator",
+       subtitle = "JMP basic healthcare waste service ladder",
+       x = "Setting",
+       y = "Proportion of healthcare facilities (%)") +
+  scale_fill_manual(
+    values = c("No service" = "#FEBC11", "Limited" = "#FFF176", "Basic" = "#EF5350"),
+    breaks = c("No service", "Limited","Basic")) +
+  guides(fill = guide_legend(title = NULL)) +
+  theme(panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank())
+
+```
+
+## Basic environmental cleaning ladder
+
+See @fig-cleaning illustrates basic environmental cleaning ladder resulted from the analysis. Basic estimates are low across all settings.
+
+```{r}
+#| label: fig-cleaning
+#| fig-cap: Basic environmental cleaning ladder
+
+# create object
+basic_cleaning_ladder <-
+  (basic_cleaning) |>
+  full_join(limited_cleaning) |>
+  full_join(no_service_cleaning)
+
+# pivot
+basic_cleaning_ladder <-
+  basic_cleaning_ladder |>
+  pivot_longer(cols = Total:Private,
+             names_to = "Setting",
+             values_to = "Percent")
+
+# reorder indicators
+basic_cleaning_ladder$Indicator <- factor(basic_cleaning_ladder$Indicator, levels = c("No service", "Limited", "Basic"))
+
+# reorder settings
+basic_cleaning_ladder$Setting <- factor(basic_cleaning_ladder$Setting, levels = c("Total", "Urban", "Rural", "Hospital", "Nonhospital", "Public", "Private"))
+
+# Assigning white for basic in geom_text
+basic_cleaning_ladder <- basic_cleaning_ladder |>
+  mutate(Color = case_when(
+    Indicator == "Basic" ~ "white",
+    .default = "black"))
+
+# plot environmental cleaning ladders
+ggplot(data = basic_cleaning_ladder,
+       mapping = aes(x = Setting,
+                     y = Percent,
+                     fill = Indicator)) +
+  geom_col() +
+  geom_text(aes(label = round(Percent, 0)),
+            position = position_stack(vjust = 0.5),
+            size = 3,
+            color = basic_cleaning_ladder$Color) +
+  theme_minimal() +
+  labs(title = "Environmental Cleaning Indicator",
+       subtitle = "JMP basic environmental cleaning service ladder",
+       x = "Setting",
+       y = "Proportion of healthcare facilities (%)") +
+  scale_fill_manual(
+    values = c("No service" = "#FEBC11", "Limited" = "#FFF176", "Basic" = "#EC008C"),
+    breaks = c("No service", "Limited","Basic")) +
+  guides(fill = guide_legend(title = NULL)) +
+  theme(panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank())
+
 ```
 
 # References
